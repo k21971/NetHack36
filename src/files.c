@@ -791,7 +791,7 @@ boolean playing; /**< True if game is running.  */
 	        0L,
 #endif
 	        u.uhave.amulet ? 1 : 0,
-	        u.uevent.ascended ? 2 : killer.name ? 1 : 0,
+	        u.uevent.ascended ? 2 : *killer.name ? 1 : 0,
 	        playing);
 
 	fp = fopen_datafile(whereis_file,"w",LEVELPREFIX);
