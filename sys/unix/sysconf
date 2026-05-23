@@ -13,12 +13,12 @@
 # Which users can use debug mode (aka wizard mode; accessed via '-D' command
 # line flag or OPTIONS=playmode:debug in the runtime options config file).
 # A value of * allows anyone to enter debugging mode.
-WIZARDS=nobody
+WIZARDS=root games
 
 # Which users can use explore mode (aka discover mode; accessed via '-X'
 # command line flag or OPTIONS=playmode:explore in runtime options file or
 # via '#exploremode' command during normal play).  Same syntax as WIZARDS.
-EXPLORERS=nobody
+EXPLORERS=*
 
 # Users allowed to use the '!' (shell escape) and '^Z' (suspend process)
 # commands to temporarily leave the game and enter a shell process.
@@ -39,7 +39,7 @@ EXPLORERS=nobody
 
 # Use the player name for matching WIZARDS, EXPLORERS and SHELLERS,
 # instead of the user's login name.
-#CHECK_PLNAME=1
+CHECK_PLNAME=1
 
 # Limit the number of simultaneous games (see also nethack.sh).
 # Valid values are 0-25.
@@ -52,10 +52,10 @@ MAXPLAYERS=0
 
 # If not null, added to string "To get local support, " in the support
 # information help.
-SUPPORT=Contact K2 on freenode irc channel #hardfought
+SUPPORT=Contact K2 or Tangles on Libera irc channel #hardfought
 
 # If not null, displayed at the end of a panic-save sequence.
-#RECOVER=Run the recover program.
+RECOVER=Run the recover program.
 
 # Uncomment the next line to disable the SEDUCE option, causing succubi and
 # incubi to use nymphs' charm behavior rather than their own seduce behavior.
@@ -64,7 +64,7 @@ SUPPORT=Contact K2 on freenode irc channel #hardfought
 # Uncomment the next line to enable some accessibility features such
 # as S_hero_override and S_pet_override symbols for screen readers
 # in the user config file.
-#ACCESSIBILITY=1
+ACCESSIBILITY=1
 
 # Uncomment to disable savefile UID checking.
 #CHECK_SAVE_UID=0
@@ -77,7 +77,7 @@ PERSMAX=50
 # Maximum entries in the record file.
 ENTRYMAX=2000
 # Minimum points to get an entry.
-#POINTSMIN=1
+POINTSMIN=1
 # Determine identity of "person" in the score file with name (0) or
 # numeric (1) user id.
 #PERS_IS_UID=1
@@ -150,34 +150,28 @@ DUMPHTMLFILE=/dgldir/userdata/%N/%n/nethack/dumplog/%t.nh.html
 # 'gdb' be available; using LIBC only works if NetHack is linked with a
 # libc that supports the backtrace(3) API.  Both require certain compilation
 # options.  See src/end.c and sys/unix/hints/* for more information.
-#GDBPATH=/usr/bin/gdb
-#GREPPATH=/bin/grep
+GDBPATH=/usr/bin/gdb
+GREPPATH=/bin/grep
 # Values are priorities: 0 - do not use this method, 1 - low priority,
 # 2 - high priority.  Non-zero priority methods are tried in order.
-#PANICTRACE_GDB=1
-#PANICTRACE_LIBC=2
+PANICTRACE_GDB=1
+PANICTRACE_LIBC=2
 
 # Ordinary run-time options can be set here to override the builtin-in
 # default values.  Unlike the SYSCF values above, individual users can
 # still choose their own option settings via NETHACKOPTIONS in their
 # environment or via ~/.nethackrc run-time configuration file.
-#OPTIONS=!autopickup,fruit:tomato,symset:DECgraphics
-# The following are the NAO defaults for 3.6.0 according to paxed
-OPTIONS=bones
-OPTIONS=color
-OPTIONS=lit_corridor
-OPTIONS=dark_room
-OPTIONS=autodig
-OPTIONS=autoopen
+
+# Basic options
 OPTIONS=disclose:yi ya yv yg yc yo
-OPTIONS=boulder:0
-OPTIONS=!autopickup
-OPTIONS=pickup_burden:unencumbered
-OPTIONS=hilite_pet
-OPTIONS=hilite_pile
-OPTIONS=msg_window:reversed
-OPTIONS=number_pad:0
-OPTIONS=sortloot:full
-OPTIONS=time
+OPTIONS=bones,color,lit_corridor,dark_room,autodig,autoopen
+OPTIONS=boulder:0,pickup_burden:unencumbered
+OPTIONS=!autopickup,hilite_pet,hilite_pile,time,use_darkgray
+OPTIONS=msg_window:reversed,number_pad:1,sortloot:full
+OPTIONS=menu_objsyms,perm_invent,hitpointbar,quick_farsight
+
+# Various MSGTYPE examples
+MSGTYPE=hide "Unknown command *"
+MSGTYPE=alert "The (couatl|.*eel|kraken) swings itself around you!"
 
 #eof

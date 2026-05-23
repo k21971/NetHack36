@@ -15,17 +15,16 @@ COMPILEREVISION?=1
 PREFIX=/opt/nethack/chroot
 
 # this is the dir where NetHack is inside the chroot
-HACKDIR=/nh363-hdf
+HACKDIR=/nh367-hdf
 INSTDIR=$(PREFIX)$(HACKDIR)
 # DGL does not use the shell script launcher
 SHELLDIR=/tmp
 VARDIR=$(INSTDIR)/var
 
-
-POSTINSTALL=cp -n sys/unix/sysconf $(INSTDIR)/sysconf; $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf; $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf; chmod $(VARFILEPERM) $(INSTDIR)/sysconf;
+POSTINSTALL=cp --update=none sys/unix/sysconf $(INSTDIR)/sysconf; $(CHOWN) $(GAMEUID) $(INSTDIR)/sysconf; $(CHGRP) $(GAMEGRP) $(INSTDIR)/sysconf; chmod $(VARFILEPERM) $(INSTDIR)/sysconf;
 
 CFLAGS1=-DCOMPRESS=\"/bin/gzip\" -DCOMPRESS_EXTENSION=\".gz\"
-CFLAGS=-g -O0 -I../include -DNOTPARMDECL $(CFLAGS1) -DDLB
+CFLAGS=-g3 -O0 -I../include -DNOTPARMDECL $(CFLAGS1) -DDLB
 CFLAGS+=-Wno-format-overflow
 CFLAGS+=-DSYSCF -DSYSCF_FILE=\"$(HACKDIR)/sysconf\" -DSECURE
 CFLAGS+=-DTIMED_DELAY
@@ -33,6 +32,25 @@ CFLAGS+=-DHACKDIR=\"$(HACKDIR)\"
 CFLAGS+=-DVAR_PLAYGROUND=\"$(HACKDIR)/var\"
 CFLAGS+=-DCONFIG_ERROR_SECURE=FALSE
 CFLAGS+=-DCURSES_GRAPHICS
+CFLAGS+=-DPANICLOG_FMT2
+CFLAGS+=-DFCMASK=0644
+CFLAGS+=-DTTY_TILES_ESCCODES
+CFLAGS+=-DEDIT_GETLIN
+CFLAGS+=-DSCORE_ON_BOTL
+CFLAGS+=-DDGAMELAUNCH
+CFLAGS+=-DLIVELOG_ENABLE
+CFLAGS+=-DDUMPLOG
+CFLAGS+=-DDUMPHTML
+
+#detection of clang vs gcc
+CCISCLANG := $(shell echo `$(CC) --version` | grep clang)
+ifneq "$(CCISCLANG)" ""
+# clang-specific follows
+CLANGGTEQ18 := $(shell expr `$(CC) -dumpversion | cut -f1 -d.` \>= 18)
+ifeq "$(CLANGGTEQ18)" "1"
+CFLAGS+=-Wno-deprecated-non-prototype
+endif
+endif  # clang-specific ends here
 
 LINK=$(CC)
 # Only needed for GLIBC stack trace:
@@ -42,14 +60,15 @@ WINSRC = $(WINTTYSRC) $(WINCURSESSRC)
 WINOBJ = $(WINTTYOBJ) $(WINCURSESOBJ)
 WINLIB = $(WINTTYLIB) $(WINCURSESLIB)
 
-WINTTYLIB=-lcurses
+WINTTYLIB=-lncursesw -ltinfo
 
 # if TTY_TILES_ESCCODES
 WINSRC += tile.c
 WINOBJ += tile.o
 
-CHOWN=chown
-CHGRP=chgrp
+CHOWN=true
+CHGRP=true
+
 GAMEUID=games
 GAMEGRP=games
 

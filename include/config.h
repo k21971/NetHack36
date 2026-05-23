@@ -217,18 +217,12 @@
    (whose name can be overridden via #define in global.h if desired) */
 #define LOGFILE  "logfile"  /* larger file for debugging purposes */
 #define XLOGFILE "xlogfile" /* even larger logfile */
-#define LIVELOGFILE "livelog" /* in-game events recorded live */
-#ifdef LIVELOGFILE
-/* LL_flags defined in global.h. Value below is ignored if SYSCF is enabled */
-/* #define LIVELOG_DETAIL (LL_WISH|LL_ACHIEVE|LL_UMONST) */
-#define LIVELOG_DETAIL 0x0FFF
-#endif
 #define NEWS     "news"     /* the file containing the latest hack news */
 #define PANICLOG "paniclog" /* log of panic and impossible events */
 
 /* alternative paniclog format, better suited for public servers with
    many players, as it saves the player name and the game start time */
-#define PANICLOG_FMT2
+/* #define PANICLOG_FMT2 */
 
 /*
  *      PERSMAX, POINTSMIN, ENTRYMAX, PERS_IS_UID:
@@ -509,7 +503,7 @@ typedef unsigned char uchar;
  * in the hints file or Makefile.
  * Set boolean option vt_tiledata in your config file to turn this on.
  * Note that gnome-terminal at least doesn't work with this. */
-#define TTY_TILES_ESCCODES
+/* #define TTY_TILES_ESCCODES */
 
 /* NetHack will execute an external program whenever a new message-window
  * message is shown.  The program to execute is given in environment variable
@@ -533,14 +527,6 @@ typedef unsigned char uchar;
    but it isn't necessary for successful operation of the program */
 #define FREE_ALL_MEMORY             /* free all memory at exit */
 
-/* Extra enhancements borrowed from nao343 and elsewhwere
-   for dgamelaunch-based server play */
-#define DGAMELAUNCH
-#ifdef DGAMELAUNCH
-#define EXTRAINFO_FN    "/dgldir/extrainfo-nh363/%n.extrainfo"
-#define MAILCKFREQ 5  /* SIMPLE_MAIL is in unixconf.h */
-#endif
-
 /* EXTRA_SANITY_CHECKS adds extra impossible calls,
  * probably not useful for normal play */
 /* #define EXTRA_SANITY_CHECKS */
@@ -562,10 +548,29 @@ typedef unsigned char uchar;
    whole thing, then type a new end for the text. */
 /* #define EDIT_GETLIN */
 
-#define WHEREIS_FILE "whereis/%n.whereis" /* Write out player's current location to player.whereis */
+/* Extra enhancements borrowed from nao343 and elsewhwere
+   for dgamelaunch-based server play */
+/* #define DGAMELAUNCH */
+#ifdef DGAMELAUNCH
+#define EXTRAINFO_FN    "/dgldir/extrainfo-nh367/%n.extrainfo"
+#define MAILCKFREQ 5    /* SIMPLE_MAIL is in unixconf.h */
+#define WHEREIS_FILE    "whereis/%n.whereis" /* Write out player's current location to player.whereis */
 
-#define DUMPLOG  /* End-of-game dump logs */
-#define DUMPHTML /* End-of-game HTML dumps */
+/* Live-logging - not particularly experimental, but very optional */
+/* #define LIVELOG_ENABLE */
+#ifdef LIVELOG_ENABLE
+#define LIVELOGFILE "livelog" /* in-game events recorded live */
+#ifdef LIVELOGFILE
+/* LL_flags defined in global.h. Value below is ignored if SYSCF is enabled */
+/* #define LIVELOG_DETAIL (LL_WISH | LL_ACHIEVE | LL_UMONST) */
+#define LIVELOG_DETAIL 0xFF
+#endif
+#endif /* LIVELOG_ENABLE */
+
+#endif /* DGAMELAUNCH */
+
+/* #define DUMPLOG */  /* End-of-game dump logs */
+/* #define DUMPHTML */ /* End-of-game HTML dumps */
 #if defined(DUMPLOG) || defined(DUMPHTML)
 
 #ifndef DUMPLOG_MSG_COUNT
@@ -578,7 +583,7 @@ typedef unsigned char uchar;
 #define DUMPLOG_FILE        "/tmp/nethack.%n.%d.log"
 /* DUMPLOG_FILE allows following placeholders:
    %% literal '%'
-   %v version (eg. "3.6.3-0")
+   %v version (eg. "3.6.7-0")
    %u game UID
    %t game start time, UNIX timestamp format
    %T current time, UNIX timestamp format
