@@ -853,7 +853,7 @@ E void FDECL(signal_whereis, (int));
 #ifdef DEBUG
 E boolean FDECL(debugcore, (const char *, BOOLEAN_P));
 #endif
-E void NDECL(reveal_paths);
+E void FDECL(reveal_paths, (int));
 E boolean FDECL(read_tribute, (const char *, const char *, int,
                                char *, int, unsigned));
 E boolean FDECL(Death_quote, (char *, int));
@@ -862,6 +862,7 @@ E void VDECL(livelog_printf, (unsigned int, const char *, ...)) PRINTF_F(2, 3);
 #ifdef EXTRAINFO_FN
 E void NDECL(mk_dgl_extrainfo);
 #endif
+extern void FDECL(do_deferred_showpaths, (int));
 
 /* ### fountain.c ### */
 
@@ -1690,7 +1691,8 @@ E void FDECL(set_output_mode, (int));
 E void NDECL(synch_cursor);
 E void NDECL(nethack_enter_nttty);
 E void NDECL(nttty_exit);
-#endif
+E int NDECL(set_keyhandling_via_option);
+#endif /* WIN32 */
 
 /* ### o_init.c ### */
 
@@ -1843,6 +1845,7 @@ E boolean NDECL(authorize_wizard_mode);
 #endif /* MICRO || WIN32 */
 #if defined(WIN32)
 E int NDECL(getlock);
+E const char *NDECL(get_portable_device);
 #endif
 
 /* ### pcsys.c ### */
@@ -2521,7 +2524,7 @@ E boolean FDECL(burnarmor, (struct monst *));
 E int FDECL(erode_obj, (struct obj *, const char *, int, int));
 E boolean FDECL(grease_protect, (struct obj *, const char *, struct monst *));
 E struct trap *FDECL(maketrap, (int, int, int));
-E void FDECL(fall_through, (BOOLEAN_P));
+E void FDECL(fall_through, (BOOLEAN_P, unsigned));
 E struct monst *FDECL(animate_statue,
                       (struct obj *, XCHAR_P, XCHAR_P, int, int *));
 E struct monst *FDECL(activate_statue_trap,
@@ -2605,6 +2608,7 @@ E void FDECL(sethanguphandler, (void (*)(int)));
 E boolean NDECL(authorize_wizard_mode);
 E boolean FDECL(check_user_string, (char *));
 E char *NDECL(get_login_name);
+E void after_opt_showpaths(const char *) NORETURN;
 #endif /* UNIX */
 
 /* ### unixtty.c ### */

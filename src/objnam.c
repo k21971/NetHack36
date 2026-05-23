@@ -1,4 +1,4 @@
-/* NetHack 3.6	objnam.c	$NHDT-Date: 1575245076 2019/12/02 00:04:36 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.255 $ */
+/* NetHack 3.6	objnam.c	$NHDT-Date: 1674864732 2023/01/28 00:12:12 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.259 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Robert Patrick Rankin, 2011. */
 /* NetHack may be freely redistributed.  See license for details. */
@@ -16,6 +16,7 @@ STATIC_DCL short FDECL(rnd_otyp_by_namedesc, (const char *, CHAR_P, int));
 STATIC_DCL boolean FDECL(wishymatch, (const char *, const char *, BOOLEAN_P));
 STATIC_DCL char *NDECL(nextobuf);
 STATIC_DCL void FDECL(releaseobuf, (char *));
+STATIC_DCL void FDECL(xcalled, (char *, int, const char *, const char *));
 STATIC_DCL char *FDECL(minimal_xname, (struct obj *));
 STATIC_DCL void FDECL(add_erosion_words, (struct obj *, char *));
 STATIC_DCL char *FDECL(doname_base, (struct obj *obj, unsigned));
@@ -116,6 +117,7 @@ register int otyp;
 
     if (Role_if(PM_SAMURAI) && Japanese_item_name(otyp))
         actualn = Japanese_item_name(otyp);
+    buf[0] = '\0';
     switch (ocl->oc_class) {
     case COIN_CLASS:
         Strcpy(buf, "coin");
@@ -146,7 +148,7 @@ register int otyp;
         else
             Strcpy(buf, "amulet");
         if (un)
-            Sprintf(eos(buf), " called %s", un);
+            xcalled(buf, BUFSZ - (dn ? (int) strlen(dn) + 3 : 0), "", un);
         if (dn)
             Sprintf(eos(buf), " (%s)", dn);
         return buf;
@@ -155,8 +157,8 @@ register int otyp;
             Strcpy(buf, actualn);
             if (GemStone(otyp))
                 Strcat(buf, " stone");
-            if (un)
-                Sprintf(eos(buf), " called %s", un);
+            if (un) /* 3: length of " (" + ")" which will enclose 'dn' */
+                xcalled(buf, BUFSZ - (dn ? (int) strlen(dn) + 3 : 0), "", un);
             if (dn)
                 Sprintf(eos(buf), " (%s)", dn);
         } else {
@@ -165,7 +167,7 @@ register int otyp;
                 Strcat(buf,
                        (ocl->oc_material == MINERAL) ? " stone" : " gem");
             if (un)
-                Sprintf(eos(buf), " called %s", un);
+                xcalled(buf, BUFSZ, "", un);
         }
         return buf;
     }
@@ -176,8 +178,8 @@ register int otyp;
         else
             Sprintf(eos(buf), " of %s", actualn);
     }
-    if (un)
-        Sprintf(eos(buf), " called %s", un);
+    if (un) /* 3: length of " (" + ")" which will enclose 'dn' */
+        xcalled(buf, BUFSZ - (dn ? (int) strlen(dn) + 3 : 0), "", un);
     if (dn)
         Sprintf(eos(buf), " (%s)", dn);
     return buf;
@@ -410,6 +412,24 @@ boolean forward;
     }
 }
 
+/* add "<pfx> called <sfx>" to end of buf, truncating if necessary */
+STATIC_OVL void
+xcalled(buf, siz, pfx, sfx)
+char *buf;       /* eos(obuf) or eos(&obuf[PREFIX]) */
+int siz;         /* BUFSZ or BUFSZ-PREFIX */
+const char *pfx; /* usually class string, sometimes more specific */
+const char *sfx; /* user assigned type name */
+{
+    int bufsiz = siz - 1 - (int) strlen(buf),
+        pfxlen = (int) (strlen(pfx) + sizeof " called " - sizeof "");
+
+    if (pfxlen > bufsiz)
+        panic("xcalled: not enough room for prefix (%d > %d)",
+              pfxlen, bufsiz);
+
+    Sprintf(eos(buf), "%s called %.*s", pfx, bufsiz - pfxlen, sfx);
+}
+
 char *
 xname(obj)
 struct obj *obj;
@@ -435,7 +455,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
     buf = nextobuf() + PREFIX; /* leave room for "17 -3 " */
     if (Role_if(PM_SAMURAI) && Japanese_item_name(typ))
         actualn = Japanese_item_name(typ);
-    /* As of 3.6.2: this used to be part of 'dn's initialization, but it
+    /* 3.6.2: this used to be part of 'dn's initialization, but it
        needs to come after possibly overriding 'actualn' */
     if (!dn)
         dn = actualn;
@@ -478,7 +498,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
         else if (nn)
             Strcpy(buf, actualn);
         else if (un)
-            Sprintf(buf, "amulet called %s", un);
+            xcalled(buf, BUFSZ - PREFIX, "amulet", un);
         else
             Sprintf(buf, "%s amulet", dn);
         break;
@@ -497,11 +517,9 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             Strcat(buf, dn);
         else if (nn)
             Strcat(buf, actualn);
-        else if (un) {
-            Strcat(buf, dn);
-            Strcat(buf, " called ");
-            Strcat(buf, un);
-        } else
+        else if (un)
+            xcalled(buf, BUFSZ - PREFIX, dn, un);
+        else
             Strcat(buf, dn);
 
         if (typ == FIGURINE && omndx != NON_PM) {
@@ -631,8 +649,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
                 }
                 Strcat(buf, actualn);
             } else {
-                Strcat(buf, " called ");
-                Strcat(buf, un);
+                xcalled(buf, BUFSZ - PREFIX, "", un);
             }
         } else {
             Strcat(buf, dn);
@@ -647,8 +664,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             Strcat(buf, " of ");
             Strcat(buf, actualn);
         } else if (un) {
-            Strcat(buf, " called ");
-            Strcat(buf, un);
+            xcalled(buf, BUFSZ - PREFIX, "", un);
         } else if (ocl->oc_magic) {
             Strcat(buf, " labeled ");
             Strcat(buf, dn);
@@ -663,7 +679,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
         else if (nn)
             Sprintf(buf, "wand of %s", actualn);
         else if (un)
-            Sprintf(buf, "wand called %s", un);
+            xcalled(buf, BUFSZ - PREFIX, "wand", un);
         else
             Sprintf(buf, "%s wand", dn);
         break;
@@ -674,7 +690,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             else if (nn)
                 Strcpy(buf, actualn);
             else if (un)
-                Sprintf(buf, "novel called %s", un);
+                xcalled(buf, BUFSZ - PREFIX, "novel", un);
             else
                 Sprintf(buf, "%s book", dn);
             break;
@@ -686,7 +702,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
                 Strcpy(buf, "spellbook of ");
             Strcat(buf, actualn);
         } else if (un) {
-            Sprintf(buf, "spellbook called %s", un);
+            xcalled(buf, BUFSZ - PREFIX, "spellbook", un);
         } else
             Sprintf(buf, "%s spellbook", dn);
         break;
@@ -696,7 +712,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
         else if (nn)
             Sprintf(buf, "ring of %s", actualn);
         else if (un)
-            Sprintf(buf, "ring called %s", un);
+            xcalled(buf, BUFSZ - PREFIX, "ring", un);
         else
             Sprintf(buf, "%s ring", dn);
         break;
@@ -707,7 +723,7 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
             Strcpy(buf, rock);
         } else if (!nn) {
             if (un)
-                Sprintf(buf, "%s called %s", rock, un);
+                xcalled(buf, BUFSZ - PREFIX, rock, un);
             else
                 Sprintf(buf, "%s %s", dn, rock);
         } else {
@@ -723,7 +739,17 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
     if (pluralize)
         Strcpy(buf, makeplural(buf));
 
-    if (obj->otyp == T_SHIRT && program_state.gameover) {
+    /* additional information shown during end-of-game inventory disclosure */
+    if (obj->otyp == T_SHIRT && program_state.gameover
+        /* o_id will be 0 for wizard mode attribute disclosure (formatted
+           via from_what() -> ysimple_name() -> minimal_xname() -> xname()
+           by the enlightenment code; moot here since T-shirts don't affect
+           any attributes (but for 3.7, aprons will have comparable text) */
+        && obj->o_id
+        /* distantname is non-0 for do_screen_description() which is used
+           to produce tooltip text for HTMLDUMP (not supported by nethack) */
+        && !distantname
+        ) {
         char tmpbuf[BUFSZ];
 
         Sprintf(eos(buf), " with text \"%s\"", tshirt_text(obj, tmpbuf));
@@ -732,7 +758,8 @@ unsigned cxn_flags; /* bitmask of CXN_xxx values */
     if (has_oname(obj) && dknown) {
         Strcat(buf, " named ");
  nameit:
-        Strcat(buf, ONAME(obj));
+        (void) strncat(buf, ONAME(obj),
+                       BUFSZ - 1 - PREFIX - (unsigned) strlen(buf));
     }
 
     if (!strncmpi(buf, "the ", 4))
@@ -1368,7 +1395,8 @@ struct obj *otmp;
 const char *adjective;
 unsigned cxn_flags; /* bitmask of CXN_xxx values */
 {
-    char *nambuf = nextobuf();
+    /* some callers [aobjnam()] rely on prefix area that xname() sets aside */
+    char *nambuf = nextobuf() + PREFIX;
     int omndx = otmp->corpsenm;
     boolean ignore_quan = (cxn_flags & CXN_SINGULAR) != 0,
             /* suppress "the" from "the unique monster corpse" */
@@ -1519,8 +1547,7 @@ struct obj *obj;
 
     /* format the object */
     if (obj->otyp == CORPSE) {
-        buf = nextobuf();
-        Strcpy(buf, corpse_xname(obj, (const char *) 0, CXN_NORMAL));
+        buf = corpse_xname(obj, (const char *) 0, CXN_NORMAL);
     } else if (obj->otyp == SLIME_MOLD) {
         /* concession to "most unique deaths competition" in the annual
            devnull tournament, suppress player supplied fruit names because
@@ -1684,7 +1711,7 @@ const char *str;
         return strcpy(buf, "an []");
     }
     (void) just_an(buf, str);
-    return strcat(buf, str);
+    return strncat(buf, str, BUFSZ - 1 - (unsigned) strlen(buf));
 }
 
 char *
@@ -1752,9 +1779,7 @@ const char *str;
         Strcpy(buf, "the ");
     else
         buf[0] = '\0';
-    Strcat(buf, str);
-
-    return buf;
+    return strncat(buf, str, BUFSZ - 1 - (unsigned) strlen(buf));
 }
 
 char *
@@ -3166,10 +3191,12 @@ struct obj *no_wish;
      */
     if ((p = strstri(bp, " named ")) != 0) {
         *p = 0;
+        /* note: if 'name' is too long, oname() will truncate it */
         name = p + 7;
     }
     if ((p = strstri(bp, " called ")) != 0) {
         *p = 0;
+        /* note: if 'un' is too long, obj lookup just won't match anything */
         un = p + 8;
         /* "helmet called telepathy" is not "helmet" (a specific type)
          * "shield called reflection" is not "shield" (a general type)
@@ -3663,14 +3690,17 @@ struct obj *no_wish;
             goto typfnd;
         }
     }
-/* Let wizards wish for traps and furniture.
- * Must come after objects check so wizards can still wish for
- * trap objects like beartraps.
- * Disallow such topology tweaks for WIZKIT startup wishes.
- */
+
+    /*
+     * Let wizards wish for traps and furniture.
+     * Must come after objects check so wizards can still wish for
+     * trap objects like beartraps.
+     * Disallow such topology tweaks for WIZKIT startup wishes.
+     */
  wiztrap:
     if (wizard && !program_state.wizkit_wishing) {
         struct rm *lev;
+        boolean madeterrain = FALSE;
         int trap, x = u.ux, y = u.uy;
 
         for (trap = NO_TRAP + 1; trap < TRAPNUM; trap++) {
@@ -3693,7 +3723,8 @@ struct obj *no_wish;
             return (struct obj *) &zeroobj;
         }
 
-        /* furniture and terrain */
+        /* furniture and terrain (use at your own risk; can clobber stairs
+           or place furniture on existing traps which shouldn't be allowed) */
         lev = &levl[x][y];
         p = eos(bp);
         if (!BSTRCMPI(bp, p - 8, "fountain")) {
@@ -3702,43 +3733,36 @@ struct obj *no_wish;
             if (!strncmpi(bp, "magic ", 6))
                 lev->blessedftn = 1;
             pline("A %sfountain.", lev->blessedftn ? "magic " : "");
-            newsym(x, y);
-            return (struct obj *) &zeroobj;
-        }
-        if (!BSTRCMPI(bp, p - 6, "throne")) {
+            madeterrain = TRUE;
+        } else if (!BSTRCMPI(bp, p - 6, "throne")) {
             lev->typ = THRONE;
             pline("A throne.");
-            newsym(x, y);
-            return (struct obj *) &zeroobj;
-        }
-        if (!BSTRCMPI(bp, p - 4, "sink")) {
+            madeterrain = TRUE;
+        } else if (!BSTRCMPI(bp, p - 4, "sink")) {
             lev->typ = SINK;
             level.flags.nsinks++;
             pline("A sink.");
-            newsym(x, y);
-            return (struct obj *) &zeroobj;
-        }
+            madeterrain = TRUE;
+
         /* ("water" matches "potion of water" rather than terrain) */
-        if (!BSTRCMPI(bp, p - 4, "pool") || !BSTRCMPI(bp, p - 4, "moat")) {
+        } else if (!BSTRCMPI(bp, p - 4, "pool")
+                   || !BSTRCMPI(bp, p - 4, "moat")) {
             lev->typ = !BSTRCMPI(bp, p - 4, "pool") ? POOL : MOAT;
             del_engr_at(x, y);
             pline("A %s.", (lev->typ == POOL) ? "pool" : "moat");
             /* Must manually make kelp! */
             water_damage_chain(level.objects[x][y], TRUE);
-            newsym(x, y);
-            return (struct obj *) &zeroobj;
-        }
-        if (!BSTRCMPI(bp, p - 4, "lava")) { /* also matches "molten lava" */
+            madeterrain = TRUE;
+
+        /* also matches "molten lava" */
+        } else if (!BSTRCMPI(bp, p - 4, "lava")) {
             lev->typ = LAVAPOOL;
             del_engr_at(x, y);
             pline("A pool of molten lava.");
             if (!(Levitation || Flying))
-                (void) lava_effects();
-            newsym(x, y);
-            return (struct obj *) &zeroobj;
-        }
-
-        if (!BSTRCMPI(bp, p - 5, "altar")) {
+                pooleffects(FALSE);
+            madeterrain = TRUE;
+        } else if (!BSTRCMPI(bp, p - 5, "altar")) {
             aligntyp al;
 
             lev->typ = ALTAR;
@@ -3751,37 +3775,43 @@ struct obj *no_wish;
             else if (!strncmpi(bp, "unaligned ", 10))
                 al = A_NONE;
             else /* -1 - A_CHAOTIC, 0 - A_NEUTRAL, 1 - A_LAWFUL */
-                al = (!rn2(6)) ? A_NONE : rn2((int) A_LAWFUL + 2) - 1;
+                al = !rn2(6) ? A_NONE : (rn2((int) A_LAWFUL + 2) - 1);
             lev->altarmask = Align2amask(al);
             pline("%s altar.", An(align_str(al)));
-            newsym(x, y);
-            return (struct obj *) &zeroobj;
-        }
-
-        if (!BSTRCMPI(bp, p - 5, "grave")
-            || !BSTRCMPI(bp, p - 9, "headstone")) {
+            madeterrain = TRUE;
+        } else if (!BSTRCMPI(bp, p - 5, "grave")
+                   || !BSTRCMPI(bp, p - 9, "headstone")) {
             make_grave(x, y, (char *) 0);
             pline("%s.", IS_GRAVE(lev->typ) ? "A grave"
                                             : "Can't place a grave here");
-            newsym(x, y);
-            return (struct obj *) &zeroobj;
-        }
-
-        if (!BSTRCMPI(bp, p - 4, "tree")) {
+            madeterrain = TRUE;
+        } else if (!BSTRCMPI(bp, p - 4, "tree")) {
             lev->typ = TREE;
             pline("A tree.");
-            newsym(x, y);
             block_point(x, y);
-            return (struct obj *) &zeroobj;
-        }
-
-        if (!BSTRCMPI(bp, p - 4, "bars")) {
+            madeterrain = TRUE;
+        } else if (!BSTRCMPI(bp, p - 4, "bars")) {
             lev->typ = IRONBARS;
             pline("Iron bars.");
-            newsym(x, y);
+            madeterrain = TRUE;
+        }
+
+        if (madeterrain) {
+            feel_newsym(x, y); /* map the spot where the wish occurred */
+            /* hero started at <x,y> but might not be there anymore (create
+               lava, decline to die, and get teleported away to safety) */
+            if (u.uinwater && !is_pool(u.ux, u.uy)) {
+                u.uinwater = 0; /* leave the water */
+                docrt();
+                vision_full_recalc = 1;
+            } else if (u.utrap && u.utraptype == TT_LAVA
+                       && !is_lava(u.ux, u.uy)) {
+                reset_utrap(FALSE);
+            }
+            /* cast 'const' away; caller won't modify this */
             return (struct obj *) &zeroobj;
         }
-    }
+    } /* end of wizard mode traps and terrain */
 
     if (!oclass && !typ) {
         if (!strncmpi(bp, "polearm", 7)) {

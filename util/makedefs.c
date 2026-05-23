@@ -1,4 +1,4 @@
-/* NetHack 3.6  makedefs.c  $NHDT-Date: 1562180226 2019/07/03 18:57:06 $  $NHDT-Branch: NetHack-3.6 $:$NHDT-Revision: 1.149 $ */
+/* NetHack 3.6  makedefs.c  $NHDT-Date: 1582403492 2020/02/22 20:31:32 $  $NHDT-Branch: NetHack-3.7 $:$NHDT-Revision: 1.177 $ */
 /* Copyright (c) Stichting Mathematisch Centrum, Amsterdam, 1985. */
 /*-Copyright (c) Kenneth Lorber, Kensington, Maryland, 2015. */
 /* Copyright (c) M. Stephenson, 1990, 1991.                       */
@@ -53,7 +53,7 @@
 #endif
 
 #if defined(UNIX) && !defined(LINT) && !defined(GCC_WARN)
-static const char SCCS_Id[] UNUSED = "@(#)makedefs.c\t3.6\t2019/12/05";
+static const char SCCS_Id[] UNUSED = "@(#)makedefs.c\t3.6\t2020/03/04";
 #endif
 
 /* names of files to be generated */
@@ -182,7 +182,8 @@ static char *FDECL(xcrypt, (const char *));
 static unsigned long FDECL(read_rumors_file,
                            (const char *, int *, long *, unsigned long));
 static boolean FDECL(get_gitinfo, (char *, char *));
-static void FDECL(do_rnd_access_file, (const char *));
+static void FDECL(do_rnd_access_file,
+                  (const char *, const char *, const char *));
 static boolean FDECL(d_filter, (char *));
 static boolean FDECL(h_filter, (char *));
 static void NDECL(build_savebones_compat_string);
@@ -200,6 +201,7 @@ static void FDECL(do_qt_control, (char *));
 static void FDECL(do_qt_text, (char *));
 static void NDECL(adjust_qt_hdrs);
 static void NDECL(put_qt_hdrs);
+static void FDECL(rafile, (int));
 
 #ifdef VISION_TABLES
 static void NDECL(H_close_gen);
@@ -362,9 +364,14 @@ char *options;
             break;
         case 's':
         case 'S':
-            do_rnd_access_file(EPITAPHFILE);
-            do_rnd_access_file(ENGRAVEFILE);
-            do_rnd_access_file(BOGUSMONFILE);
+            rafile('1');
+            rafile('2');
+            rafile('3');
+            break;
+        case '1':
+        case '2':
+        case '3':
+            rafile(*options);
             break;
         case 'h':
         case 'H':
@@ -405,6 +412,39 @@ const char *tag;
     char *name = name_file(template, tag);
 
     Unlink(name);
+}
+
+void
+rafile(whichone)
+int whichone;
+{
+    switch(whichone) {
+            /*
+             * post-3.6.5:
+             *  File must not be empty to avoid divide by 0
+             *  in core's rn2(), so provide a default entry.
+             *  [Second argument is used to construct a temporary file name
+             *  without worrying about whether the file name macros from
+             *  global.h have been modified with port-specific punctuation.]
+             */
+    case '1':
+            do_rnd_access_file(EPITAPHFILE, "epitaph",
+                /* default epitaph:  parody of the default engraving */
+                               "No matter where I went, here I am.");
+            break;
+    case '2':
+            do_rnd_access_file(ENGRAVEFILE, "engrave",
+                /* default engraving:  popularized by "The Adventures of
+                   Buckaroo Bonzai Across the 8th Dimenstion" but predates
+                   that 1984 movie; some attribute it to Confucius */
+                               "No matter where you go, there you are.");
+            break;
+    case '3':
+            do_rnd_access_file(BOGUSMONFILE, "bogusmon",
+                /* default bogusmon:  iconic monster that isn't in nethack */
+                               "grue");
+            break;
+    }
 }
 
 static FILE *
@@ -952,11 +992,13 @@ unsigned long old_rumor_offset;
 }
 
 static void
-do_rnd_access_file(fname)
-const char *fname;
+do_rnd_access_file(fname, basefname, deflt_content)
+const char *fname, *basefname;
+const char *deflt_content;
 {
-    char *line;
+    char *line, greptmp[8 + 1 + 3 + 1];
 
+    Sprintf(greptmp, "grep-%.3s.tmp", basefname);
     Sprintf(filename, DATA_IN_TEMPLATE, fname);
     Strcat(filename, ".txt");
     if (!(ifp = fopen(filename, RDTMODE))) {
@@ -973,20 +1015,25 @@ const char *fname;
         exit(EXIT_FAILURE);
     }
     Fprintf(ofp, "%s", Dont_Edit_Data);
+    /* write out the default content entry unconditionally instead of
+       waiting to see whether there are no regular output lines; if it
+       matches a regular entry (bogusmon "grue"), that entry will become
+       more likely to be picked than normal but it's nothing to worry about */
+    (void) fputs(xcrypt(deflt_content), ofp);
 
-    tfp = getfp(DATA_TEMPLATE, "grep.tmp", WRTMODE);
+    tfp = getfp(DATA_TEMPLATE, greptmp, WRTMODE);
     grep0(ifp, tfp);
-    ifp = getfp(DATA_TEMPLATE, "grep.tmp", RDTMODE);
+    ifp = getfp(DATA_TEMPLATE, greptmp, RDTMODE);
 
     while ((line = fgetline(ifp)) != 0) {
         if (line[0] != '#' && line[0] != '\n')
             (void) fputs(xcrypt(line), ofp);
-        free(line);
+        free((genericptr_t) line);
     }
     Fclose(ifp);
     Fclose(ofp);
 
-    delete_file(DATA_TEMPLATE, "grep.tmp");
+    delete_file(DATA_TEMPLATE, greptmp);
     return;
 }
 
@@ -1245,7 +1292,11 @@ const char *build_date;
 #if (NH_DEVEL_STATUS == NH_STATUS_BETA)
     Strcat(subbuf, " Beta");
 #else
+#if (NH_DEVEL_STATUS == NH_STATUS_WIP)
     Strcat(subbuf, " Work-in-progress");
+#else
+    Strcat(subbuf, " post-release");
+#endif
 #endif
 #endif
 
@@ -1847,7 +1898,11 @@ do_options()
 #if (NH_DEVEL_STATUS == NH_STATUS_BETA)
             " [beta]"
 #else
+#if (NH_DEVEL_STATUS == NH_STATUS_WIP)
             " [work-in-progress]"
+#else
+            " [post-release]"
+#endif
 #endif
 #else
             ""
@@ -2246,8 +2301,9 @@ do_oracles()
 void
 do_dungeon()
 {
-    char *line;
+    char *line, greptmp[8 + 1 + 3 + 1];
 
+    Sprintf(greptmp, "grep-%.3s.tmp", "dun");
     Sprintf(filename, DATA_IN_TEMPLATE, DGN_I_FILE);
     if (!(ifp = fopen(filename, RDTMODE))) {
         perror(filename);
@@ -2264,9 +2320,9 @@ do_dungeon()
     }
     Fprintf(ofp, "%s", Dont_Edit_Data);
 
-    tfp = getfp(DATA_TEMPLATE, "grep.tmp", WRTMODE);
+    tfp = getfp(DATA_TEMPLATE, greptmp, WRTMODE);
     grep0(ifp, tfp);
-    ifp = getfp(DATA_TEMPLATE, "grep.tmp", RDTMODE);
+    ifp = getfp(DATA_TEMPLATE, greptmp, RDTMODE);
 
     while ((line = fgetline(ifp)) != 0) {
         SpinCursor(3);
@@ -2281,7 +2337,7 @@ do_dungeon()
     Fclose(ifp);
     Fclose(ofp);
 
-    delete_file(DATA_TEMPLATE, "grep.tmp");
+    delete_file(DATA_TEMPLATE, greptmp);
     return;
 }
 

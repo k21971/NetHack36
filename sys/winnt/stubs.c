@@ -10,7 +10,7 @@
 #error You cannot compile this with both GUISTUB and TTYSTUB defined.
 #endif
 
-int GUILaunched;
+extern int GUILaunched;
 struct window_procs mswin_procs = { "-guistubs" };
 
 #ifdef QT_GRAPHICS
@@ -188,5 +188,15 @@ void
 set_altkeyhandler(const char *inName)
 {
     return;
+}
+void
+set_altkeyhandling(const char *inName)
+{
+}
+
+int
+set_keyhandling_via_option(void)
+{
+    return 1;
 }
 #endif /* TTYSTUBS */

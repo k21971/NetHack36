@@ -239,6 +239,11 @@ dofiles-nodlb:
 	-( cd $(INSTDIR) ; $(CHOWN) $(GAMEUID) $(DAT) ; \
 			$(CHGRP) $(GAMEGRP) $(DAT) ; \
 			chmod $(FILEPERM) $(DAT) )
+makedefs:
+	( cd util ; $(MAKE) makedefs )
+
+stripbs:
+	( cd util ; $(MAKE) stripbs )
 
 update: $(GAME) recover $(VARDAT) dungeon spec_levs
 #	(don't yank the old version out from under people who're playing it)
@@ -293,6 +298,7 @@ install: rootcheck $(GAME) recover $(VARDAT) dungeon spec_levs
 clean:
 	( cd src ; $(MAKE) clean )
 	( cd util ; $(MAKE) clean )
+	( cd dat ; $(MAKE) clean )
 	( cd doc ; $(MAKE) clean )
 
 # 'make spotless' returns the source tree to near-distribution condition.

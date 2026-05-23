@@ -9,7 +9,9 @@ makedefs
 dgn_comp
 lev_comp
 dlb
+dlb_main
 recover
+stripbs
 tilemap
 tileedit
 tile2x11
@@ -22,3 +24,6 @@ xpm2ppm.ttp
 # dev tool for analyzing data collected by nethack's #define MONITOR_HEAP
 heaputil
 heaputil.c
+#address san
+*.exp
+*.lib

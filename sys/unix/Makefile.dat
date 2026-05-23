@@ -112,13 +112,20 @@ quest.dat:	quest.txt ../util/makedefs
 oracles:	oracles.txt ../util/makedefs
 	../util/makedefs -h
 
-engrave:	engrave.txt ../util/makedefs
+# note: 'makedefs -s' constructs three files at once: "epitaph", "engrave",
+# and "bogusmon", in that order, but traditional 'make' doesn't provide any
+# way for a Makefile to indicate that; make the third depend on the second
+# and the second depend on the first so that if someone runs parallel make
+# it will be forced to run three instances of 'makedefs -s' sequentially
+# rather than simultaneously; depending upon how 'make' checks timestamps,
+# this might result in building all three of them three times in a row
+# [that will still produce the correct result in the end, and the extra
+# overhead of doing it should be negligible]
+bogusmon:	engrave bogusmon.txt ../util/makedefs
 	../util/makedefs -s
-
+engrave:	epitaph engrave.txt ../util/makedefs
+	../util/makedefs -s
 epitaph:	epitaph.txt ../util/makedefs
-	../util/makedefs -s
-
-bogusmon:	bogusmon.txt ../util/makedefs
 	../util/makedefs -s
 
 # note: 'options' should have already been made when include/date.h was created
@@ -165,7 +172,11 @@ dungeon: dungeon.def ../util/makedefs ../util/dgn_comp
 	../util/makedefs -e
 	../util/dgn_comp dungeon.pdf
 
-spotless:
+# gitinfo.txt is optionally made by src/Makefile when creating date.h
+clean:
+	-rm -f gitinfo.txt
+
+spotless: clean
 	-rm -f spec_levs quest_levs *.lev $(VARDAT) dungeon dungeon.pdf
 	-rm -f nhdat x11tiles beostiles pet_mark.xbm pilemark.xbm rip.xpm mapbg.xpm
 	-rm -f rip.img GEM_RSC.RSC title.img nh16.img NetHack.ad
